@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RNN vs LSTM Sentiment Analyzer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    textarea {
+      width: 100%;
+      max-width: 600px;
+      height: 120px;
+      font-size: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 16px;
+      margin-top: 15px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .results {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-align: center;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .label {
+      font-weight: bold;
+      font-size: 20px;
+      margin: 12px 0;
+      color: #555;
+    }
+
+    span.score {
+      font-weight: bold;
+      font-size: 18px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <h1>RNN vs LSTM Sentiment Analyzer</h1>
+  
+  <textarea id="review" placeholder="Type your movie review here..."></textarea>
+  <br>
+  <button onclick="analyzeSentiment()">Analyze Sentiment</button>
+
+  <div class="results">
+    <div class="card" id="rnn_card">
+      <h3>SimpleRNN</h3>
+      <p class="label" id="rnn_label">-</p>
+      <p>Score: <span class="score" id="rnn_score">-</span></p>
+    </div>
+    <div class="card" id="lstm_card">
+      <h3>LSTM</h3>
+      <p class="label" id="lstm_label">-</p>
+      <p>Score: <span class="score" id="lstm_score">-</span></p>
+    </div>
+  </div>
+
+  <script>
+    async function analyzeSentiment() {
+      const review = document.getElementById("review").value.trim();
+      if (!review) {
+        alert("Please enter a review to analyze!");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ review })
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch results");
+
+        const data = await response.json();
+
+        document.getElementById("rnn_label").innerText = data.rnn_result.label;
+        document.getElementById("rnn_score").innerText = data.rnn_result.score;
+        document.getElementById("lstm_label").innerText = data.lstm_result.label;
+        document.getElementById("lstm_score").innerText = data.lstm_result.score;
+      } catch (err) {
+        alert("Error analyzing sentiment: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

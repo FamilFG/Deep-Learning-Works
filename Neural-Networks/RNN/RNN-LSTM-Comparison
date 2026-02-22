@@ -1,0 +1,151 @@
+import numpy as np
+from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split
+
+digits = load_digits()
+X = digits.images / 16.0
+y = digits.target
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+SEQ_LEN = 8
+INPUT_SIZE = 8
+HIDDEN = 32
+OUTPUT = 10
+LR = 0.01
+EPOCHS = 15
+
+
+def softmax(x):
+    e = np.exp(x - np.max(x))
+    return e / np.sum(e)
+
+def cross_entropy(pred, target):
+    return -np.log(pred[target] + 1e-9)
+
+
+class RNN:
+    def __init__(self):
+        self.Wx = np.random.randn(HIDDEN, INPUT_SIZE) * 0.1
+        self.Wh = np.random.randn(HIDDEN, HIDDEN) * 0.1
+        self.bh = np.zeros((HIDDEN, 1))
+
+        self.Wy = np.random.randn(OUTPUT, HIDDEN) * 0.1
+        self.by = np.zeros((OUTPUT, 1))
+
+    def forward(self, X):
+        self.h_states = []
+        h = np.zeros((HIDDEN, 1))
+
+        for t in range(SEQ_LEN):
+            x = X[t].reshape(-1, 1)
+            h = np.tanh(self.Wx @ x + self.Wh @ h + self.bh)
+            self.h_states.append(h)
+
+        y = self.Wy @ h + self.by
+        return y
+
+    def backward(self, X, y_true, y_pred):
+        probs = softmax(y_pred)
+        probs[y_true] -= 1
+        probs = probs.reshape(-1, 1)
+
+        dWy = probs @ self.h_states[-1].T
+        dby = probs
+
+        dh = self.Wy.T @ probs
+
+        for t in reversed(range(SEQ_LEN)):
+            h = self.h_states[t]
+            dtanh = (1 - h ** 2) * dh
+            x = X[t].reshape(-1, 1)
+
+            self.Wx -= LR * (dtanh @ x.T)
+            self.Wh -= LR * (dtanh @ h.T)
+            self.bh -= LR * dtanh
+
+            dh = self.Wh.T @ dtanh
+
+        self.Wy -= LR * dWy
+        self.by -= LR * dby
+
+    def train(self, X, y):
+        for e in range(EPOCHS):
+            correct = 0
+            for i in range(len(X)):
+                out = self.forward(X[i])
+                pred = np.argmax(out)
+                correct += pred == y[i]
+                self.backward(X[i], y[i], out)
+
+            print(f"RNN Epoch {e+1}, accuracy: {correct/len(X):.3f}")
+
+
+class LSTM:
+    def __init__(self):
+        def gate():
+            return np.random.randn(HIDDEN, HIDDEN + INPUT_SIZE) * 0.1
+
+        self.Wf, self.Wi, self.Wo, self.Wc = gate(), gate(), gate(), gate()
+        self.bf = np.zeros((HIDDEN, 1))
+        self.bi = np.zeros((HIDDEN, 1))
+        self.bo = np.zeros((HIDDEN, 1))
+        self.bc = np.zeros((HIDDEN, 1))
+
+        self.Wy = np.random.randn(OUTPUT, HIDDEN) * 0.1
+        self.by = np.zeros((OUTPUT, 1))
+
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+
+    def forward(self, X):
+        self.cache = []
+        h = np.zeros((HIDDEN, 1))
+        c = np.zeros((HIDDEN, 1))
+
+        for t in range(SEQ_LEN):
+            x = X[t].reshape(-1, 1)
+            z = np.vstack((h, x))
+
+            f = self.sigmoid(self.Wf @ z + self.bf)
+            i = self.sigmoid(self.Wi @ z + self.bi)
+            o = self.sigmoid(self.Wo @ z + self.bo)
+            c_t = np.tanh(self.Wc @ z + self.bc)
+
+            c = f * c + i * c_t
+            h = o * np.tanh(c)
+
+            self.cache.append((z, h))
+
+        y = self.Wy @ h + self.by
+        return y
+
+    def backward(self, y_true, y_pred):
+        probs = softmax(y_pred)
+        probs[y_true] -= 1
+        probs = probs.reshape(-1, 1)
+
+        self.Wy -= LR * probs @ self.cache[-1][1].T
+        self.by -= LR * probs
+
+    def train(self, X, y):
+        for e in range(EPOCHS):
+            correct = 0
+            for i in range(len(X)):
+                out = self.forward(X[i])
+                pred = np.argmax(out)
+                correct += pred == y[i]
+                self.backward(y[i], out)
+
+            print(f"LSTM Epoch {e+1}, accuracy: {correct/len(X):.3f}")
+
+
+print("Training RNN")
+rnn = RNN()
+rnn.train(X_train, y_train)
+
+print("\nTraining LSTM")
+lstm = LSTM()
+lstm.train(X_train, y_train)
