@@ -1,3 +1,9 @@
+
+<p align="center">
+  <img src="banner.png" alt="Deep Learning Projects Banner" />
+</p>
+---
+
 # Deep Learning Projects
 
 A collection of deep learning projects showcasing neural networks, NLP, and advanced AI techniques.
