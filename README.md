@@ -2,7 +2,6 @@
 <p align="center">
   <img src="banner.png" alt="Deep Learning Projects Banner" />
 </p>
----
 
 # Deep Learning Projects
 
